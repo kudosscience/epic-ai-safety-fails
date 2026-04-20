@@ -16,7 +16,7 @@ Researchers repeatedly hit practical tooling failures, but there is no shared, s
 - As a contributor, I can receive visible credit and profile attribution for my logs.
 - As a contributor, I can attach donation and promotion links so readers can support my work.
 - As a community member, I can filter and search logs by model, tags, and time wasted.
-- As a moderator, I can quickly hide flagged content while reviewing the report queue.
+- As a moderator, I can review queued flags and decide when content should be hidden.
 
 ## Technical Approach
 
@@ -40,7 +40,7 @@ Researchers repeatedly hit practical tooling failures, but there is no shared, s
 - Researchers can create/view logs with model, task, description, tags, and time-wasted bucket.
 - Profiles show contribution history and promotion/donation links.
 - Leaderboard supports weekly, monthly, and all-time views by logs posted.
-- Flagging hides content immediately and sends it to admin queue.
+- Flagging enqueues content for moderation review; content is marked under review and is only hidden by moderator action or trusted-flag threshold.
 
 ## Dependencies
 

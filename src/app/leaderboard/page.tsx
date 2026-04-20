@@ -10,13 +10,14 @@ const SCOPE_LABELS: Record<LeaderboardScope, string> = {
 };
 
 interface LeaderboardPageProps {
-  searchParams: Promise<{ scope?: LeaderboardScope }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function LeaderboardPage({ searchParams }: LeaderboardPageProps) {
   const params = await searchParams;
-  const scope = LEADERBOARD_SCOPES.includes(params.scope as LeaderboardScope)
-    ? (params.scope as LeaderboardScope)
+  const requestedScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
+  const scope = LEADERBOARD_SCOPES.includes(requestedScope as LeaderboardScope)
+    ? (requestedScope as LeaderboardScope)
     : "allTime";
 
   const rankings = getLeaderboard(scope);

@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import Script from "next/script";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 const SIGNUP_ENDPOINT = "/api/auth/signup";
 const SIGNUP_ACTION = "signup";
@@ -46,6 +45,13 @@ export function SignupForm() {
   const [formState, setFormState] = useState<SignupFormState>(INITIAL_FORM_STATE);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [recaptchaReady, setRecaptchaReady] = useState(() => {
+    if (!SITE_KEY || typeof window === "undefined") {
+      return false;
+    }
+
+    return Boolean(window.grecaptcha);
+  });
 
   const recaptchaScriptSrc = useMemo(() => {
     if (!SITE_KEY) {
@@ -54,6 +60,56 @@ export function SignupForm() {
 
     return `https://www.google.com/recaptcha/api.js?render=${SITE_KEY}`;
   }, []);
+
+  useEffect(() => {
+    if (!recaptchaScriptSrc) {
+      return;
+    }
+
+    if (window.grecaptcha) {
+      return;
+    }
+
+    let createdScript: HTMLScriptElement | null = null;
+    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${recaptchaScriptSrc}"]`);
+
+    const handleLoad = () => {
+      setRecaptchaReady(Boolean(window.grecaptcha));
+    };
+
+    const handleError = () => {
+      setRecaptchaReady(false);
+    };
+
+    if (existingScript) {
+      existingScript.addEventListener("load", handleLoad);
+      existingScript.addEventListener("error", handleError);
+    } else {
+      createdScript = document.createElement("script");
+      createdScript.src = recaptchaScriptSrc;
+      createdScript.async = true;
+      createdScript.defer = true;
+      createdScript.addEventListener("load", handleLoad);
+      createdScript.addEventListener("error", handleError);
+      document.head.appendChild(createdScript);
+    }
+
+    if (window.grecaptcha) {
+      queueMicrotask(handleLoad);
+    }
+
+    return () => {
+      if (existingScript) {
+        existingScript.removeEventListener("load", handleLoad);
+        existingScript.removeEventListener("error", handleError);
+      }
+
+      if (createdScript) {
+        createdScript.removeEventListener("load", handleLoad);
+        createdScript.removeEventListener("error", handleError);
+      }
+    };
+  }, [recaptchaScriptSrc]);
 
   function updateField<K extends keyof SignupFormState>(key: K, value: SignupFormState[K]) {
     setFormState((previous) => ({ ...previous, [key]: value }));
@@ -77,6 +133,12 @@ export function SignupForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFeedback(null);
+
+    if (SITE_KEY && !recaptchaReady) {
+      setFeedback("reCAPTCHA is still loading. Please try again in a moment.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -113,8 +175,6 @@ export function SignupForm() {
 
   return (
     <>
-      {recaptchaScriptSrc ? <Script src={recaptchaScriptSrc} strategy="afterInteractive" /> : null}
-
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] p-5 sm:p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
@@ -175,7 +235,7 @@ export function SignupForm() {
               id="inviteCode"
               required
               value={formState.inviteCode}
-              onChange={(event) => updateField("inviteCode", event.target.value)}
+              onChange={(event) => updateField("inviteCode", event.target.value.toUpperCase())}
               className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm uppercase outline-none ring-[color:var(--accent)] focus:ring-2"
             />
           </div>
@@ -183,7 +243,7 @@ export function SignupForm() {
 
         <button
           type="submit"
-          disabled={submitting || !SITE_KEY}
+          disabled={submitting || !SITE_KEY || !recaptchaReady}
           className="w-full rounded-lg bg-[color:var(--accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[color:var(--accent-dark)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? "Creating account..." : "Create Contributor Account"}
@@ -193,6 +253,10 @@ export function SignupForm() {
           <p className="text-sm text-red-700">
             Missing `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`. Account creation is disabled until CAPTCHA is configured.
           </p>
+        ) : null}
+
+        {SITE_KEY && !recaptchaReady ? (
+          <p className="text-sm text-[color:var(--muted)]">Loading reCAPTCHA. Submission will unlock once ready.</p>
         ) : null}
 
         {feedback ? <p className="text-sm text-[color:var(--ink)]">{feedback}</p> : null}

@@ -22,5 +22,5 @@ Cache implementation-critical notes for reCAPTCHA v3 integration in signup flow.
 
 ## API Patterns Used In This Task
 
-- Client side: load script `https://www.google.com/recaptcha/api.js?render=<site_key>` and call `grecaptcha.execute(siteKey, { action: 'signup' })`.
-- Server side: submit URL-encoded form body to `siteverify`, parse JSON response, and enforce score/action checks.
+- Client-side: load script `https://www.google.com/recaptcha/api.js?render=<site_key>` and call `grecaptcha.execute(siteKey, { action: 'signup' })`.
+- Server-side: submit URL-encoded form body to `siteverify`, parse JSON response, and enforce score/action checks.

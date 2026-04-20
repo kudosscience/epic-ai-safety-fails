@@ -6,7 +6,7 @@ import {
   type LogFilters,
 } from "@/lib/domain";
 
-const FALLBACK_ALL_TIME_COUNT = 0;
+const FALLBACK_LOG_COUNT = 0;
 
 export const contributors: Contributor[] = [
   {
@@ -68,7 +68,7 @@ export const logs: FrustrationLog[] = [
     tags: ["hallucinations", "citations", "literature-review"],
     timeWasted: "1_4h",
     score: 32,
-    commentCount: 6,
+    commentCount: 2,
     createdAt: "2026-04-17T12:12:00.000Z",
     status: "visible",
   },
@@ -83,7 +83,7 @@ export const logs: FrustrationLog[] = [
     tags: ["mechanistic-interpretability", "residual-stream", "long-context"],
     timeWasted: "multiple_days",
     score: 47,
-    commentCount: 8,
+    commentCount: 1,
     createdAt: "2026-04-16T09:30:00.000Z",
     status: "visible",
   },
@@ -98,7 +98,7 @@ export const logs: FrustrationLog[] = [
     tags: ["coding-agents", "context-window", "architecture"],
     timeWasted: "30_60m",
     score: 28,
-    commentCount: 4,
+    commentCount: 0,
     createdAt: "2026-04-15T15:48:00.000Z",
     status: "visible",
   },
@@ -113,7 +113,7 @@ export const logs: FrustrationLog[] = [
     tags: ["agents", "evals", "state-management"],
     timeWasted: "1_day",
     score: 19,
-    commentCount: 2,
+    commentCount: 0,
     createdAt: "2026-04-14T18:05:00.000Z",
     status: "visible",
   },
@@ -223,9 +223,9 @@ export function getAllTags(): string[] {
 
 export function getLeaderboard(scope: LeaderboardScope): Contributor[] {
   return [...contributors].sort((a, b) => {
-    const left = b.logCounts[scope] ?? FALLBACK_ALL_TIME_COUNT;
-    const right = a.logCounts[scope] ?? FALLBACK_ALL_TIME_COUNT;
-    return left - right;
+    const left = a.logCounts[scope] ?? FALLBACK_LOG_COUNT;
+    const right = b.logCounts[scope] ?? FALLBACK_LOG_COUNT;
+    return right - left;
   });
 }
 

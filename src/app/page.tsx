@@ -3,25 +3,39 @@ import type { TimeWastedBucket } from "@/lib/domain";
 import { TIME_WASTED_BUCKETS, TIME_WASTED_LABELS } from "@/lib/domain";
 import { contributors, getAllModels, getAllTags, getContributorById, getFilteredLogs } from "@/lib/mock-data";
 
+type SearchParamValue = string | string[] | undefined;
+
+interface HomePageSearchParams {
+  [key: string]: SearchParamValue;
+}
+
 interface HomePageProps {
-  searchParams: Promise<{
-    q?: string;
-    model?: string;
-    tag?: string;
-    timeWasted?: TimeWastedBucket;
-  }>;
+  searchParams: Promise<HomePageSearchParams>;
+}
+
+function normalizeSearchParam(value: SearchParamValue): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const activeTimeBucket = TIME_WASTED_BUCKETS.includes(params.timeWasted as TimeWastedBucket)
-    ? (params.timeWasted as TimeWastedBucket)
+  const query = normalizeSearchParam(params.q);
+  const model = normalizeSearchParam(params.model);
+  const tag = normalizeSearchParam(params.tag);
+  const timeWastedParam = normalizeSearchParam(params.timeWasted);
+
+  const activeTimeBucket = TIME_WASTED_BUCKETS.includes(timeWastedParam as TimeWastedBucket)
+    ? (timeWastedParam as TimeWastedBucket)
     : undefined;
 
   const filteredLogs = getFilteredLogs({
-    query: params.q,
-    model: params.model,
-    tag: params.tag,
+    query,
+    model,
+    tag,
     timeWasted: activeTimeBucket,
   });
 
@@ -45,14 +59,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <form className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <input
             name="q"
-            defaultValue={params.q ?? ""}
+            defaultValue={query ?? ""}
             placeholder="Search failures, tasks, models"
             className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[color:var(--accent)] focus:ring-2"
           />
 
           <select
             name="model"
-            defaultValue={params.model ?? ""}
+            defaultValue={model ?? ""}
             className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[color:var(--accent)] focus:ring-2"
           >
             <option value="">All models</option>
@@ -67,7 +81,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
           <select
             name="tag"
-            defaultValue={params.tag ?? ""}
+            defaultValue={tag ?? ""}
             className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[color:var(--accent)] focus:ring-2"
           >
             <option value="">All tags</option>

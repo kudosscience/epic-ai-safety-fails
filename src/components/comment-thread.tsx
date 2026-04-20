@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { Contributor, LogComment } from "@/lib/domain";
 
 const MAX_COMMENT_DEPTH = 4;
@@ -14,13 +16,25 @@ function byCreatedAtAscending(left: LogComment, right: LogComment): number {
 export function CommentThread({ comments, contributors }: CommentThreadProps) {
   const commentList = [...comments].sort(byCreatedAtAscending);
   const contributorMap = new Map(contributors.map((item) => [item.id, item]));
+  const childrenMap = new Map<string | undefined, LogComment[]>();
 
-  function renderNodes(parentId: string | undefined, depth: number): React.ReactNode {
+  commentList.forEach((item) => {
+    const bucket = childrenMap.get(item.parentId);
+
+    if (bucket) {
+      bucket.push(item);
+      return;
+    }
+
+    childrenMap.set(item.parentId, [item]);
+  });
+
+  function renderNodes(parentId: string | undefined, depth: number): ReactNode {
     if (depth > MAX_COMMENT_DEPTH) {
       return null;
     }
 
-    const children = commentList.filter((item) => item.parentId === parentId);
+    const children = childrenMap.get(parentId) ?? [];
     if (!children.length) {
       return null;
     }

@@ -10,8 +10,8 @@ export const SIGNUP_RECAPTCHA_ACTION = "signup";
 
 const recaptchaResponseSchema = z.object({
   success: z.boolean(),
-  score: z.number().optional(),
-  action: z.string().optional(),
+  score: z.unknown().optional(),
+  action: z.unknown().optional(),
   challenge_ts: z.string().optional(),
   hostname: z.string().optional(),
   "error-codes": z.array(z.string()).optional(),
@@ -79,18 +79,38 @@ export async function verifyRecaptchaToken({
       };
     }
 
-    if (parsed.data.action && parsed.data.action !== expectedAction) {
+    if (typeof parsed.data.action !== "string" || !parsed.data.action) {
+      return { ok: false, reason: "CAPTCHA missing action." };
+    }
+
+    if (parsed.data.action !== expectedAction) {
       return { ok: false, reason: "CAPTCHA action mismatch." };
     }
 
-    const score = parsed.data.score ?? 0;
+    if (typeof parsed.data.score !== "number" || Number.isNaN(parsed.data.score)) {
+      return { ok: false, reason: "CAPTCHA missing or invalid score." };
+    }
+
+    const score = parsed.data.score;
     if (score < RECAPTCHA_MIN_SCORE) {
       return { ok: false, reason: "CAPTCHA score below threshold.", score };
     }
 
     return { ok: true, score };
-  } catch {
-    return { ok: false, reason: "CAPTCHA verification timed out or failed." };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      console.warn("reCAPTCHA verification timed out.", {
+        expectedAction,
+        timeoutMs: RECAPTCHA_VERIFY_TIMEOUT_MS,
+      });
+      return { ok: false, reason: "CAPTCHA verification timed out." };
+    }
+
+    console.error("reCAPTCHA verification failed.", {
+      expectedAction,
+      error,
+    });
+    return { ok: false, reason: "CAPTCHA verification request failed." };
   } finally {
     clearTimeout(timeoutId);
   }

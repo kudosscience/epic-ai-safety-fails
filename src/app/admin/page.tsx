@@ -1,6 +1,64 @@
-import { getFlaggedMockItems } from "@/lib/mock-data";
+import { redirect } from "next/navigation";
 
-export default function AdminPage() {
+import { getFlaggedMockItems } from "@/lib/mock-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+const FLAGGED_AT_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
+function hasAdminClaim(appMetadata: unknown): boolean {
+  if (!appMetadata || typeof appMetadata !== "object") {
+    return false;
+  }
+
+  const metadata = appMetadata as {
+    role?: unknown;
+    roles?: unknown;
+  };
+
+  if (typeof metadata.role === "string" && metadata.role.toLowerCase() === "admin") {
+    return true;
+  }
+
+  if (Array.isArray(metadata.roles)) {
+    return metadata.roles.some((role) => typeof role === "string" && role.toLowerCase() === "admin");
+  }
+
+  return false;
+}
+
+export default async function AdminPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    redirect("/signup");
+  }
+
+  let isAdmin = hasAdminClaim(user.app_metadata);
+
+  if (!isAdmin) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profileError && profile?.role === "admin") {
+      isAdmin = true;
+    }
+  }
+
+  if (!isAdmin) {
+    redirect("/");
+  }
+
   const flaggedItems = getFlaggedMockItems();
 
   return (
@@ -9,7 +67,7 @@ export default function AdminPage() {
         <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">Admin Area</p>
         <h1 className="mt-2 text-2xl font-semibold text-[color:var(--ink)] sm:text-3xl">Moderation Queue</h1>
         <p className="mt-2 text-sm text-[color:var(--muted)]">
-          Flagged content is hidden immediately and listed here for admin review. Restore or delete actions are next slice.
+          Flagged content is queued as under review. Hidden status is only applied by moderator action.
         </p>
       </section>
 
@@ -23,7 +81,9 @@ export default function AdminPage() {
                   {item.targetType === "comment" ? "Comment" : "Log"} · {item.id}
                 </p>
                 <p className="mt-1 text-sm text-[color:var(--muted)]">Reason: {item.reason}</p>
-                <p className="mt-1 text-xs text-[color:var(--muted)]">Flagged at {new Date(item.createdAt).toLocaleString()}</p>
+                <p className="mt-1 text-xs text-[color:var(--muted)]">
+                  Flagged at {FLAGGED_AT_FORMATTER.format(new Date(item.createdAt))} UTC
+                </p>
               </article>
             );
           })}

@@ -4,6 +4,10 @@ import type { Contributor, FrustrationLog } from "@/lib/domain";
 import { TIME_WASTED_LABELS } from "@/lib/domain";
 
 const FALLBACK_AUTHOR_NAME = "Unknown contributor";
+const LOG_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
 
 interface LogCardProps {
   log: FrustrationLog;
@@ -28,7 +32,7 @@ function renderOptionalLink(label: string, url?: string) {
 }
 
 export function LogCard({ log, author }: LogCardProps) {
-  const publishedAt = new Date(log.createdAt).toLocaleDateString();
+  const publishedAt = LOG_DATE_FORMATTER.format(new Date(log.createdAt));
 
   return (
     <article className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] p-4 shadow-sm sm:p-5">
