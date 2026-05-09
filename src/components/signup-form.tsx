@@ -5,6 +5,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 const SIGNUP_ENDPOINT = "/api/auth/signup";
 const SIGNUP_ACTION = "signup";
 const SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "";
+const FULL_NAME_MIN_LENGTH = 2;
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MAX_LENGTH = 32;
+const INVITE_CODE_MIN_LENGTH = 8;
+const INVITE_CODE_MAX_LENGTH = 64;
+const USERNAME_PATTERN = new RegExp(`^[a-z0-9_]{${USERNAME_MIN_LENGTH},${USERNAME_MAX_LENGTH}}$`);
+const USERNAME_HELP_TEXT = `Use ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} lowercase letters, numbers, or underscores.`;
+const FULL_NAME_HELP_TEXT = `Full name must be at least ${FULL_NAME_MIN_LENGTH} characters.`;
+const INVITE_CODE_HELP_TEXT = `Invite code must be ${INVITE_CODE_MIN_LENGTH}-${INVITE_CODE_MAX_LENGTH} characters.`;
 
 interface SignupFormState {
   email: string;
@@ -45,6 +54,17 @@ export function SignupForm() {
   const [formState, setFormState] = useState<SignupFormState>(INITIAL_FORM_STATE);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const trimmedFullName = formState.fullName.trim();
+  const normalizedUsername = formState.username.trim().toLowerCase();
+  const normalizedInviteCode = formState.inviteCode.trim().toUpperCase();
+  const fullNameIsValid = trimmedFullName.length >= FULL_NAME_MIN_LENGTH;
+  const usernameIsValid = normalizedUsername.length > 0 && USERNAME_PATTERN.test(normalizedUsername);
+  const inviteCodeIsValid =
+    normalizedInviteCode.length >= INVITE_CODE_MIN_LENGTH &&
+    normalizedInviteCode.length <= INVITE_CODE_MAX_LENGTH;
+  const showFullNameHelp = formState.fullName.length > 0 && !fullNameIsValid;
+  const showUsernameHelp = formState.username.length > 0 && !usernameIsValid;
+  const showInviteCodeHelp = formState.inviteCode.length > 0 && !inviteCodeIsValid;
   const [recaptchaReady, setRecaptchaReady] = useState(() => {
     if (!SITE_KEY || typeof window === "undefined") {
       return false;
@@ -139,6 +159,21 @@ export function SignupForm() {
       return;
     }
 
+    if (!fullNameIsValid) {
+      setFeedback(FULL_NAME_HELP_TEXT);
+      return;
+    }
+
+    if (!usernameIsValid) {
+      setFeedback(USERNAME_HELP_TEXT);
+      return;
+    }
+
+    if (!inviteCodeIsValid) {
+      setFeedback(INVITE_CODE_HELP_TEXT);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -150,6 +185,9 @@ export function SignupForm() {
         },
         body: JSON.stringify({
           ...formState,
+          fullName: trimmedFullName,
+          username: normalizedUsername,
+          inviteCode: normalizedInviteCode,
           recaptchaToken,
         }),
       });
@@ -182,20 +220,25 @@ export function SignupForm() {
             <input
               id="fullName"
               required
+              minLength={FULL_NAME_MIN_LENGTH}
               value={formState.fullName}
               onChange={(event) => updateField("fullName", event.target.value)}
               className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[color:var(--accent)] focus:ring-2"
             />
+            {showFullNameHelp ? <p className="text-xs text-red-700">{FULL_NAME_HELP_TEXT}</p> : null}
           </div>
           <div className="space-y-1">
             <InputLabel htmlFor="username" text="Username" />
             <input
               id="username"
               required
+              minLength={USERNAME_MIN_LENGTH}
+              maxLength={USERNAME_MAX_LENGTH}
               value={formState.username}
-              onChange={(event) => updateField("username", event.target.value)}
+              onChange={(event) => updateField("username", event.target.value.toLowerCase())}
               className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[color:var(--accent)] focus:ring-2"
             />
+            {showUsernameHelp ? <p className="text-xs text-red-700">{USERNAME_HELP_TEXT}</p> : null}
           </div>
           <div className="space-y-1 sm:col-span-2">
             <InputLabel htmlFor="titleAffiliation" text="Title / Affiliation" />
@@ -234,10 +277,13 @@ export function SignupForm() {
             <input
               id="inviteCode"
               required
+              minLength={INVITE_CODE_MIN_LENGTH}
+              maxLength={INVITE_CODE_MAX_LENGTH}
               value={formState.inviteCode}
               onChange={(event) => updateField("inviteCode", event.target.value.toUpperCase())}
               className="w-full rounded-lg border border-[color:var(--line)] bg-white px-3 py-2 text-sm uppercase outline-none ring-[color:var(--accent)] focus:ring-2"
             />
+            {showInviteCodeHelp ? <p className="text-xs text-red-700">{INVITE_CODE_HELP_TEXT}</p> : null}
           </div>
         </div>
 
